@@ -1,3 +1,4 @@
+@OptIn(ExperimentalUnsignedTypes::class)
 fun main() {
     val data = ubyteArrayOf(
         0x8Eu, //goto 14
@@ -26,7 +27,8 @@ fun main() {
     val result = mutableListOf<UByte>()
 
     for ((i, code, mut) in data.navigator()) {
-        val (cmd, arg) = arrayOf((code / 16u).toInt(), (code and 0x0Fu).toInt())
+        val cmd = code shr 4
+        val arg = code and 0xFL
         if (cmd == 0x0F) {
             break
         }
@@ -38,10 +40,10 @@ fun main() {
         if (cmd != 1) {
             continue
         }
-        result.addAll(data[i+1..i+arg])
+        result.addAll(data[i + 1..i + arg])
     }
 
-    val resultString = String(result.toUByteArray().toByteArray())
+    val resultString = String(result)
     check(resultString == "hello world") {
         "`$resultString` != hello world !"
     }
@@ -49,6 +51,27 @@ fun main() {
 }
 
 private val Char.b: UByte get() = this.code.toByte().toUByte()
+private operator fun String.Companion.invoke(ubytes: Collection<UByte>): String {
+    return String(ubytes.toUByteArray().toByteArray())
+}
+
+private infix fun UByte.shr(bits: Int): Int {
+    require(bits in 0..8) {
+        "byte is only 8 bit"
+    }
+    return this.toInt() shr bits
+}
+
+private infix fun UByte.shl(bits: Int): Int {
+    require(bits in 0..8) {
+        "byte is only 8 bit"
+    }
+    return this.toInt() shl bits
+}
+
+private infix fun UByte.and(int:Long): Int = this.toLong().and(int).toInt()
+
+
 
 private operator fun UByteArray.get(range: IntRange): Iterable<UByte> {
     return object : Iterable<UByte> {
